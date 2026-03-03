@@ -3,22 +3,187 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Offline Draft Board</title>
+  <title>Prime Draft Pro</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: white;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+    :root{
+      --bg:#0b0d12;
+      --panel:rgba(255,255,255,.06);
+      --stroke:rgba(255,255,255,.10);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.68);
+      --btn:rgba(255,255,255,.10);
+      --btnHover:rgba(255,255,255,.14);
+      --focus:rgba(140,190,255,.55);
+      --r:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 20% 10%, rgba(120,160,255,.18), transparent 60%),
+                  radial-gradient(900px 600px at 80% 30%, rgba(180,120,255,.14), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .wrap{
+      width:min(920px, 100%);
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:18px;
+    }
+    @media (max-width: 860px){
+      .wrap{grid-template-columns:1fr}
+    }
+    .card{
+      background:var(--panel);
+      border:1px solid var(--stroke);
+      border-radius:var(--r);
+      padding:22px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      backdrop-filter: blur(16px);
+    }
+    .title{
+      font-size:28px;
+      letter-spacing:.2px;
+      margin:0 0 6px 0;
+    }
+    .sub{
+      margin:0 0 18px 0;
+      color:var(--muted);
+      line-height:1.35;
+      font-size:14px;
+    }
+    .btns{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+    }
+    button{
+      appearance:none;
+      border:1px solid var(--stroke);
+      background:var(--btn);
+      color:var(--text);
+      border-radius:14px;
+      padding:12px 14px;
+      text-align:left;
+      font-size:14px;
+      cursor:pointer;
+      transition: background .12s ease, transform .06s ease, border-color .12s ease;
+    }
+    button:hover{background:var(--btnHover)}
+    button:active{transform: translateY(1px)}
+    button:focus-visible{
+      outline:none;
+      box-shadow: 0 0 0 3px var(--focus);
+    }
+    .btnTitle{font-weight:700; display:block; margin-bottom:2px}
+    .btnDesc{color:var(--muted); font-size:12px}
+    .right h3{
+      margin:0 0 10px 0;
+      font-size:14px;
+      color:var(--muted);
+      font-weight:700;
+      letter-spacing:.3px;
+      text-transform:uppercase;
+    }
+    .kv{
+      display:grid;
+      grid-template-columns: 160px 1fr;
+      gap:8px 12px;
+      font-size:13px;
+      line-height:1.35;
+    }
+    .k{color:var(--muted)}
+    .v{color:var(--text)}
+    .pill{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.06);
+      font-size:12px;
+      color:var(--muted);
+      margin-left:6px;
+      vertical-align:middle;
+    }
+    .footerNote{
+      margin-top:14px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.35;
+    }
+    .danger{
+      color: rgba(255,180,180,.95);
+    }
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .version{
+      color:var(--muted);
+      font-size:12px;
     }
   </style>
 </head>
 <body>
-  <h1>Offline Draft Board</h1>
+  <div class="wrap">
+    <div class="card">
+      <div class="row">
+        <h1 class="title">Prime Draft Pro</h1>
+        <div class="version" id="ver"></div>
+      </div>
+      <p class="sub">
+        Commissioner-only offline draft board. Built for the big screen. Hard roster enforcement. Optional auto-assign.
+      </p>
+
+      <div class="btns">
+        <button id="btnNew">
+          <span class="btnTitle">Create New Board <span class="pill">recommended</span></span>
+          <span class="btnDesc">Start from scratch with full customization.</span>
+        </button>
+
+        <button id="btnEspn">
+          <span class="btnTitle">Import from ESPN</span>
+          <span class="btnDesc">Pull league teams + roster/draft settings, then customize.</span>
+        </button>
+
+        <button id="btnManual">
+          <span class="btnTitle">Manual Setup</span>
+          <span class="btnDesc">Quick wizard. Choose player source (ESPN/Yahoo/Sleeper).</span>
+        </button>
+      </div>
+
+      <div class="footerNote">
+        This app is single-operator by design. No logins. No multi-user picking. Project your board and run the room.
+      </div>
+    </div>
+
+    <div class="card right">
+      <h3>V1 Rules Locked</h3>
+      <div class="kv">
+        <div class="k">Control</div><div class="v">Commissioner only</div>
+        <div class="k">Draft view</div><div class="v">Round grid (1–25/27)</div>
+        <div class="k">Enforcement</div><div class="v">Hard roster size + limits</div>
+        <div class="k">IR</div><div class="v">Ignored during draft</div>
+        <div class="k">IDP atomic</div><div class="v">DT, DE, LB, CB, S</div>
+        <div class="k">Groups</div><div class="v">DL=DT+DE, DB=CB+S</div>
+        <div class="k">Flex</div><div class="v">May reference DL/DB</div>
+        <div class="k">Limits overlap</div><div class="v">Strict dual enforcement</div>
+        <div class="k">Auto-assign</div><div class="v">Optional (starter→bench)</div>
+      </div>
+
+      <div class="footerNote danger" id="status"></div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
