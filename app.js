@@ -1,6 +1,7 @@
 import { AppState, loadState, saveState } from "./state.js";
-import { parseEspnLeagueUrl, fetchEspnLeagueSettingsWithFallback } from "./espn.js";
+import {fetchEspnLeagueSettingsWithFallback, fetchEspnPlayerUniverse, parseEspnLeagueUrl} from "./espn.js";
 import { normalizeEspnLeague } from "./normalize.js";
+import { renderBoard } from "./board.js";
 
 (async function () {
   const m = chrome.runtime.getManifest();
@@ -20,6 +21,19 @@ import { normalizeEspnLeague } from "./normalize.js";
           placeholder="https://fantasy.espn.com/football/league?leagueId=35228&seasonId=2026"
           style="width:100%; padding:10px; margin:15px 0; border-radius:8px; border:none;" />
 
+        <div style="margin-top:10px; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.05);">
+          <div style="font-weight:700; margin-bottom:6px;">Private league? Paste ESPN cookies:</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <input id="swid" type="text" placeholder="SWID (example: {XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX})"
+              style="flex:1 1 340px; padding:10px; border-radius:8px; border:none;" />
+            <input id="espn_s2" type="text" placeholder="espn_s2 (long token)"
+              style="flex:1 1 340px; padding:10px; border-radius:8px; border:none;" />
+          </div>
+          <div style="margin-top:8px; color:#bbb; font-size:12px;">
+            We only use these to fetch your league/player data from ESPN. They’re stored locally in your browser.
+          </div>
+        </div>
+
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button id="parseBtn"
             style="padding:10px 20px; border:none; border-radius:8px; cursor:pointer;">
@@ -29,6 +43,11 @@ import { normalizeEspnLeague } from "./normalize.js";
           <button id="fetchBtn" disabled
             style="padding:10px 20px; border:none; border-radius:8px; cursor:not-allowed; opacity:.6;">
             Fetch + Normalize
+          </button>
+
+          <button id="startBoardBtn" disabled
+            style="padding:10px 20px; border:none; border-radius:8px; cursor:not-allowed; opacity:.6;">
+            Start Board
           </button>
         </div>
 
@@ -42,10 +61,24 @@ import { normalizeEspnLeague } from "./normalize.js";
 
     const statusEl = document.getElementById("status");
     const previewEl = document.getElementById("preview");
+    const swidEl = document.getElementById("swid");
+    const s2El = document.getElementById("espn_s2");
     const fetchBtn = document.getElementById("fetchBtn");
+    const startBoardBtn = document.getElementById("startBoardBtn");
 
     const setStatus = (msg) => (statusEl.textContent = msg || "");
     const setPreview = (obj) => (previewEl.textContent = obj ? JSON.stringify(obj, null, 2) : "");
+
+    const enableBtn = (btn) => {
+      btn.disabled = false;
+      btn.style.cursor = "pointer";
+      btn.style.opacity = "1";
+    };
+    const disableBtn = (btn) => {
+      btn.disabled = true;
+      btn.style.cursor = "not-allowed";
+      btn.style.opacity = ".6";
+    };
 
     let parsed = null;
 
@@ -57,9 +90,8 @@ import { normalizeEspnLeague } from "./normalize.js";
 
       if (!p.ok) {
         parsed = null;
-        fetchBtn.disabled = true;
-        fetchBtn.style.cursor = "not-allowed";
-        fetchBtn.style.opacity = ".6";
+        disableBtn(fetchBtn);
+        disableBtn(startBoardBtn);
         setStatus(`❌ ${p.error}`);
         setPreview(null);
         return;
@@ -72,9 +104,8 @@ import { normalizeEspnLeague } from "./normalize.js";
       AppState.league.leagueId = parsed.leagueId;
       AppState.league.seasonId = parsed.seasonId;
 
-      fetchBtn.disabled = false;
-      fetchBtn.style.cursor = "pointer";
-      fetchBtn.style.opacity = "1";
+      enableBtn(fetchBtn);
+      disableBtn(startBoardBtn);
 
       setStatus(`✅ Parsed leagueId=${parsed.leagueId}, seasonId=${parsed.seasonId}`);
       setPreview({ parsed });
@@ -83,8 +114,15 @@ import { normalizeEspnLeague } from "./normalize.js";
     fetchBtn.onclick = async () => {
       if (!parsed?.leagueId || !parsed?.seasonId) return;
 
+      // Private ESPN leagues need cookies (SWID + espn_s2)
+      const swid = (swidEl?.value || "").trim();
+      const espn_s2 = (s2El?.value || "").trim();
+      AppState.league = AppState.league || {};
+      AppState.league.cookies = { swid, espn_s2 };
+
       setStatus("Fetching league settings from ESPN (season fallback enabled)...");
       setPreview(null);
+      disableBtn(startBoardBtn);
 
       const result = await fetchEspnLeagueSettingsWithFallback(parsed);
 
@@ -124,12 +162,40 @@ import { normalizeEspnLeague } from "./normalize.js";
 
       await saveState();
 
-      setStatus(`✅ Imported: ${normalized.league.name} (${normalized.league.teamCount} teams). Rounds=${normalized.draft.rounds}. Cached.`);
+      // Fetch + cache ESPN player universe (for dropdown/search)
+      setStatus("✅ League imported. Fetching ESPN player universe (this can take a moment)...");
+      const seasonId = AppState.league?.seasonId;
+      const cookies = AppState.league?.cookies;
+
+      setStatus("🟦 Player fetch STARTED (debug) ...");
+      const pRes = await fetchEspnPlayerUniverse({ seasonId, cookies, maxPlayers: 3000 });
+      setPreview({ playerFetchResult: pRes });
+      setStatus("🟦 Player fetch RETURNED (debug) ...");
+      if (pRes.ok) {
+        AppState.players = pRes.players;
+        await saveState();
+        setStatus(`✅ Imported: ${normalized.league.name} (${normalized.league.teamCount} teams). Rounds=${normalized.draft.rounds}. Players cached: ${pRes.count}.`);
+      } else {
+        setStatus(`✅ Imported league, but player universe failed: ${pRes.error}`);
+      }
+
+
+      
+
+      const playerCount = Array.isArray(AppState.players) ? AppState.players.length : 0;
+      setStatus(`✅ Imported: ${normalized.league.name} (${normalized.league.teamCount} teams). Rounds=${normalized.draft.rounds}. Players cached: ${playerCount}.`);
       setPreview({
         league: normalized.league,
         roster: normalized.roster,
-        draft: normalized.draft
+        draft: normalized.draft,
+        playerFetchResult: pRes
       });
+
+      enableBtn(startBoardBtn);
+    };
+
+    startBoardBtn.onclick = async () => {
+      await renderBoard();
     };
   }
 

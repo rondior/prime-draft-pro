@@ -6,10 +6,15 @@
   "action": {
     "default_title": "Open Prime Draft Pro"
   },
-  "permissions": ["storage", "cookies", "tabs"],
+  "permissions": [
+    "storage",
+    "cookies",
+    "tabs"
+  ],
   "host_permissions": [
     "https://fantasy.espn.com/*",
-    "https://lm-api-reads.fantasy.espn.com/*"
+    "https://lm-api-reads.fantasy.espn.com/*",
+    "https://www.espn.com/*"
   ],
   "background": {
     "service_worker": "background.js"
