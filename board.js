@@ -36,20 +36,22 @@ function findNextOpenPickSnake(picks, rounds, teamCount) {
   return null;
 }
 
-// TEMP: local player list stub (we’ll replace with ESPN player list next)
-function getPlayerPoolStub() {
-  return [
-    { id: "p1", name: "Ja'Marr Chase", pos: "WR", team: "CIN", bye: 10 },
-    { id: "p2", name: "Bijan Robinson", pos: "RB", team: "ATL", bye: 5 },
-    { id: "p3", name: "Travis Hunter", pos: "WR", team: "JAX", bye: 8 },
-    { id: "p4", name: "CeeDee Lamb", pos: "WR", team: "DAL", bye: 10 },
-    { id: "p5", name: "Justin Jefferson", pos: "WR", team: "MIN", bye: 6 },
-    { id: "p6", name: "Saquon Barkley", pos: "RB", team: "PHI", bye: 9 },
-    { id: "p7", name: "Christian McCaffrey", pos: "RB", team: "SF", bye: 14 },
-    { id: "p8", name: "Lamar Jackson", pos: "QB", team: "BAL", bye: 7 },
-    { id: "p9", name: "Nick Bosa", pos: "DL", team: "SF", bye: 14 },
-    { id: "p10", name: "T.J. Watt", pos: "LB", team: "PIT", bye: 5 },
-  ];
+// Player pool (ESPN universe cached in AppState.players)
+// Filters out already-drafted players so the dropdown stays clean.
+function getPlayerPool() {
+  const all = Array.isArray(AppState.players) ? AppState.players : [];
+  const draftedIds = new Set((AppState.draft?.picks || []).map(p => String(p.playerId || "")));
+
+  return all
+    .filter(p => p && p.id && p.name)
+    .filter(p => !draftedIds.has(String(p.id)))
+    .map(p => ({
+      id: String(p.id),
+      name: p.name,
+      pos: p.pos || "",
+      team: p.team || "",   // may be empty until we add proTeamId->abbr mapping
+      bye: p.bye ?? ""      // may be empty until we enrich from ESPN payload later
+    }));
 }
 
 function posColor(pos) {
@@ -294,7 +296,7 @@ export async function renderBoard() {
   }
 
   // Build header + dropdown behavior
-  const playerPool = getPlayerPoolStub();
+  const playerPool = getPlayerPool();
   let filtered = [];
   let activeIndex = 0;
 
@@ -303,7 +305,7 @@ export async function renderBoard() {
     if (!query) return [];
     return playerPool
       .filter(p => p.name.toLowerCase().includes(query))
-      .slice(0, 10);
+      .slice(0, 50);
   }
 
   function renderDropdown(drop, input) {
