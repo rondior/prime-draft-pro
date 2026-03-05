@@ -262,8 +262,14 @@ if (resumeBoardBtn) {
     };
 
     startBoardBtn.onclick = async () => {
-      await renderBoard();
-    };
+  // Start fresh: wipe picks + reset cursor (never resume)
+  AppState.draft = AppState.draft || {};
+  AppState.draft.picks = [];
+  AppState.draft.cursor = { round: 1, teamIndex: 0 };
+
+  await saveState();
+  await renderBoard();
+};
   }
 
   const btnEspn = document.getElementById("btnEspn");
