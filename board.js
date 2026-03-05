@@ -299,7 +299,7 @@ export async function renderBoard() {
     await saveState();
   }
 
-  // Draft a selected player object into the cursor cell
+ // Draft a selected player object into the cursor cell
   async function draftSelectedPlayer(player) {
     if (!cursor) return;
     await upsertPick(cursor.round, cursor.teamIndex, {
@@ -312,6 +312,74 @@ export async function renderBoard() {
     await saveState();
     renderBoard();
   }
+
+  // Undo the most recent pick (commissioner control)
+  let undoLockUntil = 0;
+
+  async function undoLastPick() {
+  // 200ms protection window (survives re-renders)
+  const now = Date.now();
+  if (now < undoLockUntil) return;
+  undoLockUntil = now + 400;
+
+  if (!AppState?.draft) return;
+  if (!Array.isArray(AppState.draft.picks) || AppState.draft.picks.length === 0) return;
+
+  const teamCount = (AppState.draft.teams && AppState.draft.teams.length) ? AppState.draft.teams.length : 0;
+  const rounds = AppState.draft.rounds || 0;
+  if (!teamCount || !rounds) return;
+
+  // Only snake-accurate behavior (your board is snake)
+  // If you ever add non-snake, we can add a different path.
+  const isSnake = (AppState.draft.draftType || "").toUpperCase() === "SNAKE";
+  if (!isSnake) return;
+
+  // Convert (round, teamIndex) <-> linear pick number (1..rounds*teamCount)
+  const toPickNum = (round, teamIndex) => {
+    const offset = (round % 2 === 1) ? teamIndex : (teamCount - 1 - teamIndex);
+    return (round - 1) * teamCount + offset + 1;
+  };
+
+  const fromPickNum = (pickNum) => {
+    const r = Math.floor((pickNum - 1) / teamCount) + 1;
+    const offset = (pickNum - 1) % teamCount;
+    const t = (r % 2 === 1) ? offset : (teamCount - 1 - offset);
+    return { round: r, teamIndex: t };
+  };
+
+  // "Cursor" is the next open slot. Undo should remove the pick immediately BEFORE it.
+  // If cursor is null (draft complete), treat it as "after the last pick".
+  let cursorPickNum;
+  if (AppState.draft.cursor && AppState.draft.cursor.round && (AppState.draft.cursor.teamIndex ?? null) !== null) {
+    cursorPickNum = toPickNum(AppState.draft.cursor.round, AppState.draft.cursor.teamIndex);
+  } else {
+    cursorPickNum = (rounds * teamCount) + 1; // one past the end
+  }
+
+  // Start from the pick immediately before the cursor and walk backward
+  // until we find an actual saved pick to remove.
+  let targetPickNum = cursorPickNum - 1;
+  if (targetPickNum < 1) return;
+
+  const hasPickAt = (round, teamIndex) =>
+    AppState.draft.picks.some(p => p.round === round && p.teamIndex === teamIndex);
+
+  while (targetPickNum >= 1) {
+    const { round, teamIndex } = fromPickNum(targetPickNum);
+    if (hasPickAt(round, teamIndex)) {
+      // Remove that pick
+      AppState.draft.picks = AppState.draft.picks.filter(p => !(p.round === round && p.teamIndex === teamIndex));
+
+      // Cursor goes back to the undone slot
+      AppState.draft.cursor = { round, teamIndex };
+
+      await saveState();
+      renderBoard();
+      return;
+    }
+    targetPickNum--;
+  }
+}
 
   // Build header + dropdown behavior
   const playerPool = getPlayerPool();
@@ -428,7 +496,11 @@ export async function renderBoard() {
               const p = filtered[0];
               if (p) draftSelectedPlayer(p);
             }
-          }, ["Draft"])
+                    }, ["Draft"]),
+           el("button", {
+             class: "btn",
+             id: "undoBtn"
+          }, ["Undo"])
         ]),
         el("div", { class: "dropdown", id: "playerDropdown" }, [])
       ])
@@ -490,6 +562,14 @@ export async function renderBoard() {
   document.head.appendChild(style);
   document.body.innerHTML = "";
   document.body.appendChild(header);
+
+  // Wire buttons (el() helper does not bind onClick props)
+  const undoBtn = document.getElementById("undoBtn");
+  if (undoBtn) {
+    undoBtn.disabled = !(AppState.draft?.picks?.length > 0);
+  undoBtn.onclick = () => undoLastPick();
+  }
+
   document.body.appendChild(board);
 
   document.getElementById("homeBtn").onclick = () => location.reload();

@@ -16,7 +16,23 @@ export const AppState = {
 
 export function saveState() {
   return new Promise((resolve) => {
-    chrome.storage.local.set({ primeDraftState: AppState }, resolve);
+    // Save ONLY what we need for persistence (avoid quota issues)
+    const compact = {
+      league: AppState.league ?? null,
+      playerSource: AppState.playerSource ?? null,
+      rosterConfig: AppState.rosterConfig ?? null,
+      draft: AppState.draft ?? { rounds: 0, teams: [], picks: [] },
+      settings: AppState.settings ?? {
+        autoAssign: true,
+        enforceLimits: true,
+        enforceRosterSize: true
+      },
+
+      // Keep optional debug, but do NOT store giant player pools
+      _debug: AppState._debug ?? null
+    };
+
+    chrome.storage.local.set({ primeDraftState: compact }, () => resolve());
   });
 }
 
