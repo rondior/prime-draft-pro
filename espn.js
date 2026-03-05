@@ -234,6 +234,119 @@ export async function fetchEspnPlayerUniverse({
   }
 
   return { ok: true, count: uniq.length, players: uniq };
+}
 
+// --- Pro team map via ESPN NFL Teams endpoint ---
+// Returns: { ok:true, map: { [proTeamId]: { abbrev, bye } } }
+export async function fetchEspnProTeamMapFromNFLTeams({ seasonId, cookies, timeoutMs = 15000 }) {
 
+  // Reliable source for ESPN team abbreviations (ids match proTeamId, e.g. 33 = BAL)
+  const url = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams";
+
+  const resp = await bgFetchJson({ url, cookies, timeoutMs });
+
+  if (!resp?.ok) {
+    return {
+      ok: false,
+      error: `ESPN NFL teams fetch failed (${resp?.status ?? 0}). ${resp?.finalUrl || url} ${resp?.textSnippet || resp?.error || ""}`.trim()
+    };
+  }
+
+  const data = resp.json;
+
+  const teamsWrap = data?.sports?.[0]?.leagues?.[0]?.teams;
+  const arr = Array.isArray(teamsWrap) ? teamsWrap : [];
+
+  if (!arr.length) {
+    return {
+      ok: false,
+      error: "ESPN NFL teams response did not include leagues[0].teams array.",
+      debug: {
+        finalUrl: resp.finalUrl,
+        status: resp.status,
+        jsonKeys: data && typeof data === "object"
+          ? Object.keys(data).slice(0, 30)
+          : typeof data
+      }
+    };
+  }
+
+  const map = {};
+
+  for (const w of arr) {
+    const t = w?.team || w;
+
+    const id = t?.id;
+    if (!id) continue;
+
+    const abbrev = String(
+      t?.abbreviation ||
+      t?.abbrev ||
+      t?.shortDisplayName ||
+      t?.displayName ||
+      ""
+    );
+
+    map[String(id)] = {
+      abbrev,
+      bye: null
+    };
+  }
+
+  return { ok: true, map };
+}
+
+export async function fetchEspnByeWeekMapFromProTeams({ cookies, timeoutMs = 15000 }) {
+
+  const url = "https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl?view=proTeams";
+
+  const resp = await bgFetchJson({ url, cookies, timeoutMs });
+
+  if (!resp?.ok) {
+    return { ok: false };
+  }
+
+  const data = resp.json;
+  const teams = Array.isArray(data?.proTeams) ? data.proTeams : [];
+
+  if (!teams.length) {
+    return { ok: false };
+  }
+
+  const map = {};
+
+  for (const t of teams) {
+
+    const id = t?.id;
+    if (id == null) continue;
+
+    const bye =
+      t?.byeWeek ??
+      t?.bye ??
+      t?.byeWeeks?.[0] ??
+      null;
+
+    map[String(id)] = { bye };
+  }
+
+  return { ok: true, map };
+}
+
+export async function fetchEspnProTeamMap({ seasonId, cookies, timeoutMs = 15000 }) {
+
+  // 1) get team abbreviations (stable endpoint)
+  const base = await fetchEspnProTeamMapFromNFLTeams({ seasonId, cookies, timeoutMs });
+  if (!base?.ok) return base;
+
+  // 2) attempt to fetch bye weeks from fantasy endpoint
+  const byeRes = await fetchEspnByeWeekMapFromProTeams({ cookies, timeoutMs });
+
+  if (byeRes?.ok) {
+    for (const [id, v] of Object.entries(byeRes.map || {})) {
+      if (!base.map[id]) base.map[id] = { abbrev: "", bye: null };
+      base.map[id].bye = v?.bye ?? base.map[id].bye ?? null;
+    }
+  }
+
+  return base;
 }

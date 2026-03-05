@@ -77,6 +77,7 @@ function posColor(pos) {
 
 export async function renderBoard() {
   await loadState();
+  window.__APPSTATE__ = AppState; // DEBUG
 
   const league = AppState.leagueConfig?.league;
   const draftCfg = AppState.leagueConfig?.draft;
@@ -98,16 +99,33 @@ export async function renderBoard() {
   const teamCount = teams.length;
   const rounds = draftCfg.rounds || 0;
 
-  const nextOpen = (AppState.draft.draftType === "SNAKE")
+    const nextOpen = (AppState.draft.draftType === "SNAKE")
     ? findNextOpenPickSnake(AppState.draft.picks, rounds, teamCount)
     : null;
 
-  if (!AppState.draft.cursor && nextOpen) {
+  // Treat as "empty draft" when there are no actual drafted players yet.
+  // (Some flows may create placeholder pick objects; we only count picks with a playerId.)
+    const hasAnyRealPick = (AppState.draft.picks || []).some(p => p && (p.playerId != null));
+
+  // If there are no real picks, force the cursor to the beginning,
+  // even if a stale cursor was saved from prior sessions.
+  if (!hasAnyRealPick) {
+    const cur = AppState.draft.cursor;
+    const isStart = cur && cur.round === 1 && cur.teamIndex === 0;
+
+    if (!isStart) {
+      AppState.draft.cursor = { round: 1, teamIndex: 0 };
+      await saveState();
+    }
+  } else if (!AppState.draft.cursor && nextOpen) {
+    // Resume draft: go to next open pick
     AppState.draft.cursor = { round: nextOpen.round, teamIndex: nextOpen.teamIndex };
     await saveState();
   }
 
-  const cursor = AppState.draft.cursor || (nextOpen ? { round: nextOpen.round, teamIndex: nextOpen.teamIndex } : null);
+  const cursor =
+    AppState.draft.cursor ||
+    (nextOpen ? { round: nextOpen.round, teamIndex: nextOpen.teamIndex } : null);
 
   const style = el("style", {
     html: `

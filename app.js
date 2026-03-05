@@ -2,6 +2,7 @@ import { AppState, loadState, saveState } from "./state.js";
 import {fetchEspnLeagueSettingsWithFallback, fetchEspnPlayerUniverse, parseEspnLeagueUrl} from "./espn.js";
 import { normalizeEspnLeague } from "./normalize.js";
 import { renderBoard } from "./board.js";
+import { fetchEspnProTeamMap } from "./espn.js";
 
 (async function () {
   const m = chrome.runtime.getManifest();
@@ -34,7 +35,7 @@ import { renderBoard } from "./board.js";
           </div>
         </div>
 
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button id="parseBtn"
             style="padding:10px 20px; border:none; border-radius:8px; cursor:pointer;">
             Parse URL
@@ -47,7 +48,12 @@ import { renderBoard } from "./board.js";
 
           <button id="startBoardBtn" disabled
             style="padding:10px 20px; border:none; border-radius:8px; cursor:not-allowed; opacity:.6;">
-            Start Board
+            Start Board (New)
+          </button>
+
+          <button id="resumeBoardBtn" disabled
+            style="padding:10px 20px; border:none; border-radius:8px; cursor:not-allowed; opacity:.6;">
+            Resume Board
           </button>
         </div>
 
@@ -63,8 +69,17 @@ import { renderBoard } from "./board.js";
     const previewEl = document.getElementById("preview");
     const swidEl = document.getElementById("swid");
     const s2El = document.getElementById("espn_s2");
+
+    // Prefill last-used ESPN info (quality-of-life)
+    const urlEl = document.getElementById("leagueUrl");
+    if (urlEl && AppState.league?.lastEspnUrl) urlEl.value = AppState.league.lastEspnUrl;
+
+    if (swidEl && AppState.league?.cookies?.swid) swidEl.value = AppState.league.cookies.swid;
+    if (s2El && AppState.league?.cookies?.espn_s2) s2El.value = AppState.league.cookies.espn_s2;
+
     const fetchBtn = document.getElementById("fetchBtn");
     const startBoardBtn = document.getElementById("startBoardBtn");
+    const resumeBoardBtn = document.getElementById("resumeBoardBtn");
 
     const setStatus = (msg) => (statusEl.textContent = msg || "");
     const setPreview = (obj) => (previewEl.textContent = obj ? JSON.stringify(obj, null, 2) : "");
@@ -80,12 +95,37 @@ import { renderBoard } from "./board.js";
       btn.style.opacity = ".6";
     };
 
+    // Enable Resume if we already have a saved league config
+if (resumeBoardBtn) {
+  if (AppState.leagueConfig?.league && AppState.leagueConfig?.draft) {
+    enableBtn(resumeBoardBtn);
+  } else {
+    disableBtn(resumeBoardBtn);
+  }
+
+  resumeBoardBtn.onclick = async () => {
+    // Load latest saved state (in case it changed)
+    await loadState();
+
+    if (!AppState.leagueConfig?.league || !AppState.leagueConfig?.draft) {
+      setStatus("Nothing to resume yet. Import a league first.");
+      return;
+    }
+
+    // Go straight to the board without re-importing
+    await renderBoard();
+  };
+}
+
     let parsed = null;
 
     document.getElementById("backBtn").onclick = () => location.reload();
 
-    document.getElementById("parseBtn").onclick = () => {
+    document.getElementById("parseBtn").onclick = async () => {
       const url = document.getElementById("leagueUrl").value;
+      AppState.league = AppState.league || {};
+      AppState.league.lastEspnUrl = url;
+      await saveState();
       const p = parseEspnLeagueUrl(url);
 
       if (!p.ok) {
@@ -171,10 +211,36 @@ import { renderBoard } from "./board.js";
       const pRes = await fetchEspnPlayerUniverse({ seasonId, cookies, maxPlayers: 3000 });
       setPreview({ playerFetchResult: pRes });
       setStatus("🟦 Player fetch RETURNED (debug) ...");
+
       if (pRes.ok) {
-        AppState.players = pRes.players;
+        // Fetch pro team map for team abbrev + bye
+        const teamRes = await fetchEspnProTeamMap({ seasonId, cookies });
+        // DEBUG: show pro team fetch result in preview// Enrich players
+        // Build pro team map (abbrev + bye) via background fetch (CORS-safe)
+        const teamMap = teamRes.ok ? teamRes.map : {};
+
+        // DEBUG (kept small): confirm we can resolve Lamar's proTeamId=33
+        AppState._debug = AppState._debug || {};
+        AppState._debug.teamMapSummary = {
+          ok: teamRes.ok,
+          mapSize: teamRes.ok ? Object.keys(teamMap).length : 0,
+          has33: !!teamMap["33"],
+          err: teamRes.ok ? null : (teamRes.error || "unknown")
+        };
+
+        const enriched = pRes.players.map(p => {
+          const meta = teamMap[String(p.proTeamId)] || {};
+          return {
+            ...p,
+            team: meta.abbrev || "",
+            bye: meta.bye ?? null
+          };
+        });
+
+        AppState.players = enriched;
         await saveState();
-        setStatus(`✅ Imported: ${normalized.league.name} (${normalized.league.teamCount} teams). Rounds=${normalized.draft.rounds}. Players cached: ${pRes.count}.`);
+
+        setStatus(`✅ Imported: ${normalized.league.name} (${normalized.league.teamCount} teams). Rounds=${normalized.draft.rounds}. Players cached: ${enriched.length}.`);
       } else {
         setStatus(`✅ Imported league, but player universe failed: ${pRes.error}`);
       }
@@ -188,7 +254,8 @@ import { renderBoard } from "./board.js";
         league: normalized.league,
         roster: normalized.roster,
         draft: normalized.draft,
-        playerFetchResult: pRes
+        playerFetchResult: pRes,
+        teamFetchResult: AppState._debug?.teamMapSummary || null
       });
 
       enableBtn(startBoardBtn);
