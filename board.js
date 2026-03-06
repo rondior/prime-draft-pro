@@ -270,7 +270,7 @@ export async function renderBoard() {
     .pmeta{font-size:11px;color:var(--muted);white-space:nowrap;}
 
     .board{flex:1;min-height:0;padding:10px 12px 14px;}
-    .frame{height:100%;border:1px solid var(--stroke);border-radius:var(--r);overflow:hidden;background: rgba(255,255,255,.03);box-shadow:0 18px 60px rgba(0,0,0,.35);}
+    .frame{height:100%;border:1px solid var(--stroke);border-radius:var(--r);overflow:auto;background: rgba(255,255,255,.03);box-shadow:0 18px 60px rgba(0,0,0,.35);}
     table{width:100%;height:100%;border-collapse:collapse;table-layout:fixed;}
     thead th{border-bottom:1px solid rgba(255,255,255,.10);padding:8px 6px;text-align:center;vertical-align:middle;overflow:hidden;}
     .teamHead{display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.05;width:100%;}
@@ -282,6 +282,16 @@ export async function renderBoard() {
     tbody td:hover{background:rgba(255,255,255,.05)}
     td.activePick{background:var(--active);outline: 2px solid var(--activeBorder);outline-offset:-2px;}
     td.activePick::after{content:"ON CLOCK";position:absolute;top:6px;right:6px;font-size:9px;color:rgba(255,255,255,.72);background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.14);padding:2px 6px;border-radius:999px;}
+        /* Highlight entire "on clock" team column (header + body) */
+    th.onClockCol,
+    td.onClockCol{
+      background: rgba(255,255,255,.055);
+    }
+          /* Highlight entire current round row */
+    tr.onClockRow th,
+    tr.onClockRow td{
+      background: rgba(255,255,255,.04);
+    }
     .pickName{font-weight:900;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .pickMeta{font-size:10px;color:var(--muted);margin-top:2px;}
     tbody tr{height: calc((100vh - 62px - 24px - 44px)/${Math.max(1, rounds)});}
@@ -505,29 +515,37 @@ export async function renderBoard() {
   const headRow = el("tr");
   headRow.appendChild(el("th", { class: "roundHead" }, ["Rd"]));
 
-  teams.forEach((t) => {
-    const name = (t.name || "").trim() || "Team";
-    const abbr = (t.abbrev || "").trim();
-    headRow.appendChild(el("th", {}, [
-      el("div", { class: "teamHead" }, [
-        el("div", { class: "teamName", title: name }, [name]),
-        el("div", { class: "teamAbbrev" }, [abbr ? abbr : ""])
-      ])
-    ]));
-  });
+  teams.forEach((t, idx) => {
+  const name = (t.name || "").trim() || "Team";
+  const abbr = (t.abbrev || "").trim();
+
+  headRow.appendChild(el("th", {
+    class: (cursor && cursor.teamIndex === idx) ? "onClockCol" : ""
+  }, [
+    el("div", { class: "teamHead" }, [
+      el("div", { class: "teamName", title: name }, [name]),
+      el("div", { class: "teamAbbrev" }, [abbr ? abbr : ""])
+    ])
+  ]));
+});
 
   thead.appendChild(headRow);
   table.appendChild(thead);
 
   const tbody = el("tbody");
   for (let r = 1; r <= rounds; r++) {
-    const tr = el("tr");
+    const tr = el("tr", {
+      class: (cursor && cursor.round === r) ? "onClockRow" : ""
+    });
     tr.appendChild(el("th", {}, [String(r)]));
 
     for (let c = 0; c < teamCount; c++) {
       const existing = getPick(AppState.draft.picks, r, c);
       const td = el("td", {
-        class: (cursor && cursor.round === r && cursor.teamIndex === c) ? "activePick" : "",
+        class: [
+          (cursor && cursor.round === r && cursor.teamIndex === c) ? "activePick" : "",
+          (cursor && cursor.teamIndex === c) ? "onClockCol" : ""
+        ].join(" "),
         title: existing ? "Pick saved" : "Use header search to draft",
       }, []);
 
@@ -583,6 +601,38 @@ export async function renderBoard() {
   // Focus the search input automatically
   const search = document.getElementById("playerSearch");
   if (search) setTimeout(() => search.focus(), 50);
+
+   // Auto-center the active pick row inside the scroll frame
+  setTimeout(() => {
+    const frame = document.querySelector(".frame");
+    const active = document.querySelector("td.activePick");
+    if (!frame || !active) return;
+
+    const activeTop = active.offsetTop;
+    const activeHeight = active.offsetHeight;
+    const targetScrollTop = activeTop - (frame.clientHeight / 2) + (activeHeight / 2);
+
+    frame.scrollTop = Math.max(0, targetScrollTop);
+  }, 0);
+
+  // Auto-center the active pick row inside the scroll frame
+  setTimeout(() => {
+   const frame = document.querySelector(".frame");
+   const active = document.querySelector("td.activePick");
+
+   if (!frame || !active) return;
+
+   const frameRect = frame.getBoundingClientRect();
+   const activeRect = active.getBoundingClientRect();
+
+   const offset =
+    activeRect.top -
+    frameRect.top -
+    frame.clientHeight / 2 +
+    active.clientHeight / 2;
+
+    frame.scrollTop += offset;
+}, 0);
 
   // Keyboard shortcut: Cmd/Ctrl + Z = Undo last pick (register once)
   if (!window.__primeDraftUndoHotkeyBound) {
