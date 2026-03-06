@@ -589,10 +589,30 @@ export async function renderBoard() {
     window.__primeDraftUndoHotkeyBound = true;
 
     document.addEventListener("keydown", (e) => {
-      if ((e.metaKey || e.ctrlKey) && (e.key || "").toLowerCase() === "z") {
-        e.preventDefault();
-        undoLastPick();
-      }
-    });
+
+  // Cmd/Ctrl + Z → Undo
+  if ((e.metaKey || e.ctrlKey) && (e.key || "").toLowerCase() === "z") {
+    e.preventDefault();
+    undoLastPick();
+    return;
   }
+
+  // "/" → focus player search
+  if (e.key === "/") {
+    e.preventDefault();
+    const search = document.getElementById("playerSearch");
+    if (search) search.focus();
+    return;
+  }
+
+  // Backspace → Undo (only when NOT typing in search)
+  if (e.key === "Backspace") {
+    const active = document.activeElement;
+    if (!active || active.id !== "playerSearch") {
+      e.preventDefault();
+      undoLastPick();
+     }
+    }
+  });
+ }
 }
