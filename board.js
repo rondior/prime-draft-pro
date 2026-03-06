@@ -75,6 +75,94 @@ function posColor(pos) {
   return map[pos] || "rgba(255,255,255,.08)";
 }
 
+let draftTimerInterval = null;
+let draftTimerEndAt = 0;
+const DRAFT_TIMER_SECONDS = 90;
+
+let pickSound = null;
+
+let audioCtx = null;
+let pickBuffer = null;
+
+async function playPickSound() {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    if (!pickBuffer) {
+      const url = chrome.runtime.getURL("assets/pick-sound.mp3");
+      const res = await fetch(url);
+      const arr = await res.arrayBuffer();
+      pickBuffer = await audioCtx.decodeAudioData(arr);
+    }
+
+    const src = audioCtx.createBufferSource();
+    src.buffer = pickBuffer;
+
+    // Lower pitch slightly
+    src.playbackRate.value = 0.87;
+
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.95;
+
+    src.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    src.start();
+  } catch (e) {}
+}
+
+function startDraftTimer() {
+  const timerEl = document.getElementById("draftTimer");
+  if (!timerEl) return;
+
+  if (draftTimerInterval) {
+    clearInterval(draftTimerInterval);
+    draftTimerInterval = null;
+  }
+
+  draftTimerEndAt = Date.now() + (DRAFT_TIMER_SECONDS * 1000);
+
+  draftTimerInterval = setInterval(() => {
+    const remaining = Math.max(0, draftTimerEndAt - Date.now());
+    const sec = Math.ceil(remaining / 1000);
+
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+
+    timerEl.textContent =
+      String(m).padStart(2, "0") + ":" +
+      String(s).padStart(2, "0");
+
+    // Beep in last 10 seconds
+    if (sec <= 10 && sec > 0) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.frequency.value = 880;
+        osc.type = "sine";
+
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+
+        osc.start();
+        osc.stop(ctx.currentTime + 0.08);
+      } catch (e) {}
+    }
+
+    if (sec <= 0) {
+      clearInterval(draftTimerInterval);
+      draftTimerInterval = null;
+    }
+
+  }, 250);
+}
+
 export async function renderBoard() {
   await loadState();
   window.__APPSTATE__ = AppState; // DEBUG
@@ -309,19 +397,27 @@ export async function renderBoard() {
     await saveState();
   }
 
- // Draft a selected player object into the cursor cell
-  async function draftSelectedPlayer(player) {
-    if (!cursor) return;
-    await upsertPick(cursor.round, cursor.teamIndex, {
-      playerId: player.id,
-      name: player.name,
-      pos: player.pos,
-      proTeam: player.team,
-      bye: player.bye
-    });
-    await saveState();
-    renderBoard();
-  }
+// Draft a selected player object into the cursor cell
+async function draftSelectedPlayer(player) {
+  if (!cursor) return;
+
+  await upsertPick(cursor.round, cursor.teamIndex, {
+    playerId: player.id,
+    name: player.name,
+    pos: player.pos,
+    proTeam: player.team,
+    bye: player.bye
+  });
+
+  await saveState();
+
+  // Play broadcast-style confirmation sound
+  playPickSound();
+
+  renderBoard();
+}
+
+let pickSound = null;
 
   // Undo the most recent pick (commissioner control)
   let undoLockUntil = 0;
@@ -449,10 +545,19 @@ export async function renderBoard() {
     el("div", { class: "console" }, [
       el("div", { class: "consoleWrap" }, [
         el("div", { class: "consoleBox" }, [
-          el("div", { class: "consoleLabel" }, ["ON CLOCK"]),
-          el("div", { class: "consoleHint" }, [
-            cursor ? `R${cursor.round} • ${teams[cursor.teamIndex]?.abbrev || "TEAM"}` : "Done"
+                    el("div", { class: "consoleLabel" }, ["ON CLOCK"]),
+          el("div", {
+            class: "consoleHint",
+            id: "onClockTeam"
+          }, [
+            cursor
+              ? `${teams[cursor.teamIndex]?.name || teams[cursor.teamIndex]?.abbrev || "TEAM"} • Pick ${String(cursor.round).padStart(2, "0")}.${String(cursor.teamIndex + 1).padStart(2, "0")}`
+              : "Draft Complete"
           ]),
+          el("div", {
+            class: "consoleHint",
+            id: "draftTimer"
+          }, ["01:30"]),
           (() => {
             const inp = el("input", {
               class: "consoleInput",
@@ -615,24 +720,7 @@ export async function renderBoard() {
     frame.scrollTop = Math.max(0, targetScrollTop);
   }, 0);
 
-  // Auto-center the active pick row inside the scroll frame
-  setTimeout(() => {
-   const frame = document.querySelector(".frame");
-   const active = document.querySelector("td.activePick");
-
-   if (!frame || !active) return;
-
-   const frameRect = frame.getBoundingClientRect();
-   const activeRect = active.getBoundingClientRect();
-
-   const offset =
-    activeRect.top -
-    frameRect.top -
-    frame.clientHeight / 2 +
-    active.clientHeight / 2;
-
-    frame.scrollTop += offset;
-}, 0);
+  startDraftTimer();
 
   // Keyboard shortcut: Cmd/Ctrl + Z = Undo last pick (register once)
   if (!window.__primeDraftUndoHotkeyBound) {
@@ -662,7 +750,7 @@ export async function renderBoard() {
       e.preventDefault();
       undoLastPick();
      }
-    }
-  });
- }
+   }
+     });
+   }
 }

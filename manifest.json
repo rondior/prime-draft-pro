@@ -11,11 +11,21 @@
     "cookies",
     "tabs"
   ],
-    "host_permissions": [
+  "host_permissions": [
     "https://fantasy.espn.com/*",
     "https://lm-api-reads.fantasy.espn.com/*",
     "https://www.espn.com/*",
     "https://site.api.espn.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "assets/pick-sound.mp3"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
   ],
   "background": {
     "service_worker": "background.js"
