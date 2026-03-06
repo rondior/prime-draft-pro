@@ -6,182 +6,680 @@
   <title>Prime Draft Pro</title>
   <style>
     :root{
-      --bg:#0b0d12;
+      --bg:#07111f;
+      --bg2:#0b1728;
       --panel:rgba(255,255,255,.06);
+      --panelStrong:rgba(255,255,255,.09);
       --stroke:rgba(255,255,255,.10);
-      --text:rgba(255,255,255,.92);
-      --muted:rgba(255,255,255,.68);
-      --btn:rgba(255,255,255,.10);
-      --btnHover:rgba(255,255,255,.14);
-      --focus:rgba(140,190,255,.55);
-      --r:18px;
+      --strokeStrong:rgba(255,255,255,.16);
+      --text:rgba(255,255,255,.94);
+      --muted:rgba(255,255,255,.70);
+      --soft:rgba(255,255,255,.54);
+      --accent:#57a6ff;
+      --accent2:#7c5cff;
+      --success:#29c36a;
+      --warn:#ffb84d;
+      --danger:#ff6b6b;
+      --chip:rgba(255,255,255,.08);
+      --btn:rgba(255,255,255,.08);
+      --btnHover:rgba(255,255,255,.13);
+      --focus:rgba(120,170,255,.55);
+      --shadow:0 20px 60px rgba(0,0,0,.35);
+      --r:22px;
+      --rSm:14px;
     }
+
     *{box-sizing:border-box}
-    body{
+
+    html,body{
       margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: radial-gradient(1200px 700px at 20% 10%, rgba(120,160,255,.18), transparent 60%),
-                  radial-gradient(900px 600px at 80% 30%, rgba(180,120,255,.14), transparent 55%),
-                  var(--bg);
+      min-height:100%;
+      font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 10% 0%, rgba(87,166,255,.20), transparent 55%),
+        radial-gradient(1000px 700px at 100% 10%, rgba(124,92,255,.16), transparent 50%),
+        linear-gradient(180deg, var(--bg), var(--bg2));
+    }
+
+    body{
       min-height:100vh;
+      padding:28px;
+    }
+
+    .appShell{
+      width:min(1400px, 100%);
+      margin:0 auto;
+      display:grid;
+      gap:22px;
+    }
+
+    .topbar{
       display:flex;
       align-items:center;
-      justify-content:center;
-      padding:24px;
+      justify-content:space-between;
+      gap:16px;
+      padding:6px 2px 2px;
     }
-    .wrap{
-      width:min(920px, 100%);
+
+    .brandBlock{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    .eyebrow{
+      color:var(--soft);
+      font-size:12px;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      font-weight:700;
+    }
+
+    .brandRow{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      flex-wrap:wrap;
+    }
+
+    .logoBadge{
+      width:48px;
+      height:48px;
+      border-radius:16px;
       display:grid;
-      grid-template-columns: 1.2fr .8fr;
-      gap:18px;
+      place-items:center;
+      font-weight:900;
+      font-size:18px;
+      background:linear-gradient(135deg, rgba(87,166,255,.28), rgba(124,92,255,.28));
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow:var(--shadow);
     }
-    @media (max-width: 860px){
-      .wrap{grid-template-columns:1fr}
+
+    .titleWrap h1{
+      margin:0;
+      font-size:34px;
+      line-height:1;
+      letter-spacing:.01em;
     }
+
+    .titleWrap p{
+      margin:6px 0 0 0;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .topMeta{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      min-height:36px;
+      padding:0 12px;
+      border-radius:999px;
+      border:1px solid var(--stroke);
+      background:var(--chip);
+      color:var(--muted);
+      font-size:13px;
+      white-space:nowrap;
+    }
+
+    .dashboardGrid{
+      display:grid;
+      grid-template-columns:1.2fr .8fr;
+      gap:22px;
+      align-items:start;
+    }
+
+    @media (max-width: 1080px){
+      .dashboardGrid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    .stack{
+      display:grid;
+      gap:22px;
+    }
+
     .card{
       background:var(--panel);
       border:1px solid var(--stroke);
       border-radius:var(--r);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(18px);
+    }
+
+    .section{
       padding:22px;
-      box-shadow: 0 18px 60px rgba(0,0,0,.35);
-      backdrop-filter: blur(16px);
     }
-    .title{
-      font-size:28px;
-      letter-spacing:.2px;
-      margin:0 0 6px 0;
+
+    .sectionHeader{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+      margin-bottom:16px;
     }
-    .sub{
-      margin:0 0 18px 0;
+
+    .sectionTitle{
+      margin:0;
+      font-size:18px;
+      font-weight:800;
+      letter-spacing:.01em;
+    }
+
+    .sectionSub{
+      margin:6px 0 0 0;
       color:var(--muted);
-      line-height:1.35;
-      font-size:14px;
+      font-size:13px;
+      line-height:1.45;
     }
-    .btns{
+
+    .hero{
+      position:relative;
+      overflow:hidden;
+      padding:26px;
+      min-height:250px;
+      background:
+        linear-gradient(135deg, rgba(87,166,255,.14), rgba(124,92,255,.10)),
+        rgba(255,255,255,.05);
+    }
+
+    .hero::after{
+      content:"";
+      position:absolute;
+      inset:auto -40px -50px auto;
+      width:300px;
+      height:300px;
+      border-radius:50%;
+      background:radial-gradient(circle, rgba(87,166,255,.20), transparent 65%);
+      pointer-events:none;
+    }
+
+    .heroTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      flex-wrap:wrap;
+      margin-bottom:24px;
+    }
+
+    .heroLabel{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      height:34px;
+      padding:0 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.08);
+      color:#d7e8ff;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .hero h2{
+      margin:14px 0 8px 0;
+      font-size:32px;
+      line-height:1.05;
+      letter-spacing:.01em;
+      max-width:700px;
+    }
+
+    .hero p{
+      margin:0;
+      max-width:720px;
+      color:var(--muted);
+      font-size:15px;
+      line-height:1.55;
+    }
+
+    .heroStats{
       display:grid;
-      grid-template-columns: 1fr;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:12px;
+      margin-top:24px;
+    }
+
+    @media (max-width: 760px){
+      .heroStats{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .stat{
+      padding:14px 14px 12px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.06);
+    }
+
+    .statLabel{
+      color:var(--soft);
+      font-size:12px;
+      margin-bottom:8px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-weight:700;
+    }
+
+    .statValue{
+      font-size:22px;
+      font-weight:800;
+      line-height:1;
+    }
+
+    .actionsGrid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 1fr));
+      gap:14px;
+    }
+
+    @media (max-width: 760px){
+      .actionsGrid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    .actionBtn{
+      appearance:none;
+      width:100%;
+      border:1px solid var(--stroke);
+      background:var(--btn);
+      color:var(--text);
+      border-radius:18px;
+      padding:18px 18px 16px;
+      text-align:left;
+      cursor:pointer;
+      transition:background .12s ease, transform .06s ease, border-color .12s ease;
+    }
+
+    .actionBtn:hover{background:var(--btnHover)}
+    .actionBtn:active{transform:translateY(1px)}
+    .actionBtn:focus-visible{
+      outline:none;
+      box-shadow:0 0 0 3px var(--focus);
+    }
+
+    .actionBtn.primary{
+      background:linear-gradient(135deg, rgba(87,166,255,.22), rgba(87,166,255,.10));
+      border-color:rgba(87,166,255,.28);
+    }
+
+    .actionBtn.success{
+      background:linear-gradient(135deg, rgba(41,195,106,.18), rgba(41,195,106,.08));
+      border-color:rgba(41,195,106,.26);
+    }
+
+    .actionBtn.warn{
+      background:linear-gradient(135deg, rgba(255,184,77,.18), rgba(255,184,77,.08));
+      border-color:rgba(255,184,77,.26);
+    }
+
+    .actionTitle{
+      display:block;
+      font-size:16px;
+      font-weight:800;
+      margin-bottom:6px;
+    }
+
+    .actionDesc{
+      display:block;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    .miniActions{
+      display:grid;
       gap:10px;
     }
-    button{
+
+    .miniBtn{
+      appearance:none;
+      width:100%;
+      border:1px solid var(--stroke);
+      background:var(--btn);
+      color:var(--text);
+      border-radius:16px;
+      padding:14px 14px;
+      text-align:left;
+      cursor:pointer;
+      transition:background .12s ease, transform .06s ease, border-color .12s ease;
+      font-size:14px;
+      font-weight:700;
+    }
+
+    .miniBtn:hover{background:var(--btnHover)}
+    .miniBtn:active{transform:translateY(1px)}
+    .miniBtn:focus-visible{
+      outline:none;
+      box-shadow:0 0 0 3px var(--focus);
+    }
+
+    .miniBtn small{
+      display:block;
+      margin-top:4px;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:500;
+      line-height:1.4;
+    }
+
+    .draftList{
+      display:grid;
+      gap:14px;
+    }
+
+    .draftCard{
+      padding:18px;
+      border-radius:18px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.05);
+    }
+
+    .draftCardTop{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:14px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+
+    .draftName{
+      margin:0;
+      font-size:18px;
+      font-weight:800;
+      line-height:1.15;
+    }
+
+    .draftMeta{
+      margin-top:7px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    .statusBadge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:92px;
+      height:32px;
+      padding:0 12px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.07);
+      color:var(--text);
+    }
+
+    .status-setup{
+      background:rgba(87,166,255,.16);
+      border-color:rgba(87,166,255,.28);
+      color:#dbeaff;
+    }
+
+    .status-active{
+      background:rgba(255,184,77,.16);
+      border-color:rgba(255,184,77,.28);
+      color:#ffe7bf;
+    }
+
+    .status-completed{
+      background:rgba(41,195,106,.16);
+      border-color:rgba(41,195,106,.28);
+      color:#d8ffe8;
+    }
+
+    .draftStats{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:10px;
+      margin-bottom:14px;
+    }
+
+    @media (max-width: 760px){
+      .draftStats{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .draftStat{
+      padding:12px;
+      border-radius:14px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .draftStatLabel{
+      color:var(--soft);
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-weight:700;
+      margin-bottom:6px;
+    }
+
+    .draftStatValue{
+      font-size:16px;
+      font-weight:800;
+    }
+
+    .draftActions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .draftActionBtn{
       appearance:none;
       border:1px solid var(--stroke);
       background:var(--btn);
       color:var(--text);
-      border-radius:14px;
-      padding:12px 14px;
-      text-align:left;
-      font-size:14px;
+      border-radius:12px;
+      padding:10px 12px;
       cursor:pointer;
-      transition: background .12s ease, transform .06s ease, border-color .12s ease;
-    }
-    button:hover{background:var(--btnHover)}
-    button:active{transform: translateY(1px)}
-    button:focus-visible{
-      outline:none;
-      box-shadow: 0 0 0 3px var(--focus);
-    }
-    .btnTitle{font-weight:700; display:block; margin-bottom:2px}
-    .btnDesc{color:var(--muted); font-size:12px}
-    .right h3{
-      margin:0 0 10px 0;
-      font-size:14px;
-      color:var(--muted);
-      font-weight:700;
-      letter-spacing:.3px;
-      text-transform:uppercase;
-    }
-    .kv{
-      display:grid;
-      grid-template-columns: 160px 1fr;
-      gap:8px 12px;
       font-size:13px;
-      line-height:1.35;
+      font-weight:700;
+      transition:background .12s ease, transform .06s ease, border-color .12s ease;
     }
-    .k{color:var(--muted)}
-    .v{color:var(--text)}
-    .pill{
-      display:inline-block;
-      padding:2px 8px;
-      border-radius:999px;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.06);
-      font-size:12px;
+
+    .draftActionBtn:hover{background:var(--btnHover)}
+    .draftActionBtn:active{transform:translateY(1px)}
+    .draftActionBtn:focus-visible{
+      outline:none;
+      box-shadow:0 0 0 3px var(--focus);
+    }
+
+    .draftActionBtn.primary{
+      background:linear-gradient(135deg, rgba(87,166,255,.22), rgba(87,166,255,.10));
+      border-color:rgba(87,166,255,.28);
+    }
+
+    .draftActionBtn.danger{
+      background:rgba(255,107,107,.10);
+      border-color:rgba(255,107,107,.22);
+      color:#ffd2d2;
+    }
+
+    .emptyState{
+      padding:20px;
+      border-radius:18px;
+      border:1px dashed rgba(255,255,255,.16);
+      background:rgba(255,255,255,.04);
       color:var(--muted);
-      margin-left:6px;
-      vertical-align:middle;
+      font-size:14px;
+      line-height:1.55;
     }
+
+    .statusArea{
+      min-height:22px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+
+    .statusArea.error{
+      color:#ffd1d1;
+    }
+
     .footerNote{
+      color:var(--soft);
+      font-size:12px;
+      line-height:1.5;
       margin-top:14px;
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.35;
-    }
-    .danger{
-      color: rgba(255,180,180,.95);
-    }
-    .row{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:8px;
-    }
-    .version{
-      color:var(--muted);
-      font-size:12px;
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="row">
-        <h1 class="title">Prime Draft Pro</h1>
-        <div class="version" id="ver"></div>
-      </div>
-      <p class="sub">
-        Commissioner-only offline draft board. Built for the big screen. Hard roster enforcement. Optional auto-assign.
-      </p>
-
-      <div class="btns">
-        <button id="btnNew">
-          <span class="btnTitle">Create New Board <span class="pill">recommended</span></span>
-          <span class="btnDesc">Start from scratch with full customization.</span>
-        </button>
-
-        <button id="btnEspn">
-          <span class="btnTitle">Import from ESPN</span>
-          <span class="btnDesc">Pull league teams + roster/draft settings, then customize.</span>
-        </button>
-
-        <button id="btnManual">
-          <span class="btnTitle">Manual Setup</span>
-          <span class="btnDesc">Quick wizard. Choose player source (ESPN/Yahoo/Sleeper).</span>
-        </button>
+  <div class="appShell">
+    <header class="topbar">
+      <div class="brandBlock">
+        <div class="eyebrow">Commissioner Control Center</div>
+        <div class="brandRow">
+          <div class="logoBadge">PDP</div>
+          <div class="titleWrap">
+            <h1>Prime Draft Pro</h1>
+            <p>NFL draft command dashboard built for the big screen.</p>
+          </div>
+        </div>
       </div>
 
-      <div class="footerNote">
-        This app is single-operator by design. No logins. No multi-user picking. Project your board and run the room.
+      <div class="topMeta">
+        <div class="chip">Season <strong id="seasonLabel">2026</strong></div>
+        <div class="chip">Version <strong id="ver">—</strong></div>
       </div>
-    </div>
+    </header>
 
-    <div class="card right">
-      <h3>V1 Rules Locked</h3>
-      <div class="kv">
-        <div class="k">Control</div><div class="v">Commissioner only</div>
-        <div class="k">Draft view</div><div class="v">Round grid (1–25/27)</div>
-        <div class="k">Enforcement</div><div class="v">Hard roster size + limits</div>
-        <div class="k">IR</div><div class="v">Ignored during draft</div>
-        <div class="k">IDP atomic</div><div class="v">DT, DE, LB, CB, S</div>
-        <div class="k">Groups</div><div class="v">DL=DT+DE, DB=CB+S</div>
-        <div class="k">Flex</div><div class="v">May reference DL/DB</div>
-        <div class="k">Limits overlap</div><div class="v">Strict dual enforcement</div>
-        <div class="k">Auto-assign</div><div class="v">Optional (starter→bench)</div>
+    <section class="card hero">
+      <div class="heroTop">
+        <div>
+          <div class="heroLabel">Draft Mission Control</div>
+          <h2>Run your fantasy football draft from one polished commissioner dashboard.</h2>
+          <p>
+            Create new drafts, import ESPN leagues, resume active boards, and manage saved seasons from a cleaner and more intuitive control center.
+          </p>
+        </div>
       </div>
 
-      <div class="footerNote danger" id="status"></div>
-    </div>
+      <div class="heroStats">
+        <div class="stat">
+          <div class="statLabel">Active Draft</div>
+          <div class="statValue" id="heroActiveDraft">None</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Saved Drafts</div>
+          <div class="statValue" id="heroSavedCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Completed</div>
+          <div class="statValue" id="heroCompletedCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Current Season</div>
+          <div class="statValue" id="heroSeasonValue">2026</div>
+        </div>
+      </div>
+    </section>
+
+    <main class="dashboardGrid">
+      <div class="stack">
+        <section class="card section">
+          <div class="sectionHeader">
+            <div>
+               <h2 class="sectionTitle">Start Here</h2>
+              <p class="sectionSub">Choose how you want to create your next draft.</p>
+            </div>
+          </div>
+
+          <div class="actionsGrid">
+            <button class="actionBtn primary" id="btnCustomDraft">
+              <span class="actionTitle">Create Custom Draft</span>
+              <span class="actionDesc">Build a fully custom commissioner-controlled draft from scratch.</span>
+            </button>
+
+            <button class="actionBtn success" id="btnEspn">
+              <span class="actionTitle">Import From ESPN</span>
+              <span class="actionDesc">Pull teams, rounds, and roster rules directly from an ESPN league.</span>
+            </button>
+          </div>
+
+          <div class="footerNote">
+            Start here to create a new draft. Saved Drafts and Active Draft controls stay below for ongoing league management.
+          </div>
+        </section>
+
+        <section class="card section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Saved Drafts</h2>
+              <p class="sectionSub">Active, setup, and completed drafts for this device.</p>
+            </div>
+          </div>
+
+          <div class="draftList" id="draftList">
+            <div class="emptyState">
+              No saved drafts yet. Create a new draft or import a league from ESPN to populate this dashboard.
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="card section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">Commissioner Tools</h2>
+              <p class="sectionSub">Utility controls and future management areas for draft-day operations.</p>
+            </div>
+          </div>
+
+          <div class="miniActions">
+            <button class="miniBtn" id="btnOpenBoard">
+              Open Current Board
+              <small>Jump directly to the active board if a draft is already loaded.</small>
+            </button>
+
+            <button class="miniBtn" id="btnPastDrafts">
+              Past Drafts
+              <small>Reserved for previous seasons, archived boards, and year-over-year history.</small>
+            </button>
+
+            <button class="miniBtn" id="btnSettings">
+              Draft Settings
+              <small>Reserved for timer controls, sound controls, enforcement, and future league tools.</small>
+            </button>
+          </div>
+        </section>
+
+        <section class="card section">
+          <div class="sectionHeader">
+            <div>
+              <h2 class="sectionTitle">System Status</h2>
+              <p class="sectionSub">Live app messages and import status will appear here.</p>
+            </div>
+          </div>
+
+          <div class="statusArea" id="status"></div>
+        </section>
+      </div>
+    </main>
   </div>
 
   <script type="module" src="app.js"></script>

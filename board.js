@@ -104,12 +104,12 @@ async function playPickSound() {
     src.playbackRate.value = 0.87;
 
     const gain = audioCtx.createGain();
-    gain.gain.value = 0.95;
+    gain.gain.value = 1.00;
 
     src.connect(gain);
     gain.connect(audioCtx.destination);
 
-    src.start();
+    src.start(0);
   } catch (e) {}
 }
 
@@ -174,7 +174,7 @@ export async function renderBoard() {
     document.body.innerHTML = `
       <div style="padding:40px;font-family:system-ui;background:#0b0d12;color:white;min-height:100vh;">
         <h1>No league loaded</h1>
-        <button onclick="location.reload()">← Home</button>
+        <button id="boardHomeBtn">← Home</button>
       </div>`;
     return;
   }
@@ -693,7 +693,11 @@ let pickSound = null;
 
   document.body.appendChild(board);
 
-  document.getElementById("homeBtn").onclick = () => location.reload();
+    const homeBtn = document.getElementById("homeBtn");
+    if (homeBtn) homeBtn.onclick = () => location.reload();
+
+    const boardHomeBtn = document.getElementById("boardHomeBtn");
+    if (boardHomeBtn) boardHomeBtn.onclick = () => location.reload();
 
   // Close dropdown when clicking outside
   document.addEventListener("click", (e) => {

@@ -38,25 +38,14 @@ export function parseEspnLeagueUrl(input) {
   return { ok: true, leagueId, seasonId };
 }
 
-function buildEspnCookieHeader(cookies) {
-  const swid = (cookies?.swid || "").trim();
-  const s2 = (cookies?.espn_s2 || "").trim();
-  const parts = [];
-  if (swid) parts.push(`SWID=${swid}`);
-  if (s2) parts.push(`espn_s2=${s2}`);
-  return parts.join("; ");
-}
-
-
-function bgFetchJson({ url, cookies, timeoutMs = 15000 }) {
+function bgFetchJson({ url, timeoutMs = 15000 }) {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage(
-      { type: "ESPN_FETCH_JSON", url, cookies, timeoutMs },
+      { type: "ESPN_FETCH_JSON", url, timeoutMs },
       (resp) => resolve(resp || { ok: false, status: 0, error: "No response from background" })
     );
   });
 }
-
 
 export function buildEspnLeagueEndpoint({ leagueId, seasonId }) {
   const base = `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${seasonId}/segments/0/leagues/${leagueId}`;
@@ -68,53 +57,67 @@ export function buildEspnLeagueEndpoint({ leagueId, seasonId }) {
   return `${base}?${params.toString()}`;
 }
 
-async function fetchOnce({ leagueId, seasonId, cookies }) {
+async function fetchOnce({ leagueId, seasonId }) {
   const url = buildEspnLeagueEndpoint({ leagueId, seasonId });
-  const cookieHeader = buildEspnCookieHeader(cookies);
+  const resp = await bgFetchJson({ url, timeoutMs: 15000 });
 
-  const res = await fetch(url, {
-    method: "GET",
-    headers: cookieHeader ? { Cookie: cookieHeader } : {},
-    credentials: "include"
-  });
+  if (!resp?.ok) {
+    const status = resp?.status ?? 0;
+    const contentType = resp?.contentType || "";
+    const redirected = !!resp?.redirected;
+    const finalUrl = resp?.finalUrl || url;
+    const hasCookies = !!(resp?.cookiePresent?.SWID && resp?.cookiePresent?.espn_s2);
+    const textSnippet = resp?.textSnippet || resp?.error || "";
 
-  if (res.status === 401 || res.status === 403) {
-    return {
-      ok: false,
-      kind: "auth",
-      url,
-      error: "ESPN blocked access (private league). Check SWID + espn_s2."
-    };
-  }
+    if (!hasCookies) {
+      return {
+        ok: false,
+        kind: "auth",
+        url,
+        error: "Not signed into ESPN in this Chrome profile. Sign into ESPN in this browser, then retry."
+      };
+    }
 
-  if (res.status === 404) {
-    return { ok: false, kind: "notfound", url, error: `Not found for seasonId=${seasonId}` };
-  }
+    if (redirected || /text\/html/i.test(contentType)) {
+      return {
+        ok: false,
+        kind: "auth",
+        url,
+        error: "Your ESPN session may be expired or blocked. Sign into ESPN again in this browser, then retry."
+      };
+    }
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
+    if (status === 404) {
+      return {
+        ok: false,
+        kind: "notfound",
+        url,
+        error: `Not found for seasonId=${seasonId}`
+      };
+    }
+
     return {
       ok: false,
       kind: "http",
       url,
-      error: `ESPN fetch failed (${res.status}). ${text ? text.slice(0, 140) : ""}`.trim()
+      error: `ESPN fetch failed (${status}). ${finalUrl} ${textSnippet}`.trim()
     };
   }
 
-  const data = await res.json();
+  const data = resp.json;
   const leagueName = data?.settings?.name || data?.name || "ESPN League";
   const teamCount = Array.isArray(data?.teams) ? data.teams.length : 0;
 
   return { ok: true, url, leagueName, teamCount, data };
 }
 
-export async function fetchEspnLeagueSettingsWithFallback({ leagueId, seasonId, cookies }) {
+export async function fetchEspnLeagueSettingsWithFallback({ leagueId, seasonId }) {
   const s = Number(seasonId);
   const candidates = [s, s - 1, s - 2].filter((x) => x >= 2000).map(String);
 
   const attempts = [];
   for (const cand of candidates) {
-    const r = await fetchOnce({ leagueId, seasonId: cand, cookies });
+    const r = await fetchOnce({ leagueId, seasonId: cand });
     attempts.push({ seasonId: cand, ok: r.ok, url: r.url, kind: r.kind || "ok" });
 
     if (r.ok) return { ...r, seasonIdResolved: cand, attempts };
