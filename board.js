@@ -381,7 +381,7 @@ export async function renderBoard() {
   }
 }
 
-  // Build header + dropdown behavior
+// Build header + dropdown behavior
   const playerPool = getPlayerPool();
   let filtered = [];
   let activeIndex = 0;
@@ -487,19 +487,11 @@ export async function renderBoard() {
           el("button", {
             class: "draftBtn",
             id: "draftBtn",
-            disabled: cursor ? null : "disabled",
-            onClick: () => {
-              const inp = document.getElementById("playerSearch");
-              const q = inp?.value || "";
-              filtered = filterPlayers(q);
-              activeIndex = 0;
-              const p = filtered[0];
-              if (p) draftSelectedPlayer(p);
-            }
-                    }, ["Draft"]),
-           el("button", {
-             class: "btn",
-             id: "undoBtn"
+            disabled: cursor ? null : "disabled"
+          }, ["Draft"]),
+          el("button", {
+            class: "btn",
+            id: "undoBtn"
           }, ["Undo"])
         ]),
         el("div", { class: "dropdown", id: "playerDropdown" }, [])
@@ -591,4 +583,16 @@ export async function renderBoard() {
   // Focus the search input automatically
   const search = document.getElementById("playerSearch");
   if (search) setTimeout(() => search.focus(), 50);
+
+  // Keyboard shortcut: Cmd/Ctrl + Z = Undo last pick (register once)
+  if (!window.__primeDraftUndoHotkeyBound) {
+    window.__primeDraftUndoHotkeyBound = true;
+
+    document.addEventListener("keydown", (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key || "").toLowerCase() === "z") {
+        e.preventDefault();
+        undoLastPick();
+      }
+    });
+  }
 }
