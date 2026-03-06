@@ -539,6 +539,12 @@ export async function renderBoard() {
         title: existing ? "Pick saved" : "Use header search to draft",
       }, []);
 
+      td.onclick = async () => {
+        AppState.draft.cursor = { round: r, teamIndex: c };
+        await saveState();
+        renderBoard();
+      };
+
       if (existing) {
         td.appendChild(el("div", { class: "pickName", title: existing.name }, [existing.name]));
         const metaParts = [];
