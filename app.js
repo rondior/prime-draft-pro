@@ -408,21 +408,6 @@ import { renderBoard } from "./board.js";
                     ">
                     Start Board
                   </button>
-
-                  <button id="resumeBoardBtn" disabled
-                    style="
-                      appearance:none;
-                      padding:12px 18px;
-                      border:1px solid rgba(255,255,255,.10);
-                      border-radius:14px;
-                      cursor:not-allowed;
-                      opacity:.6;
-                      font-weight:800;
-                      background:rgba(255,255,255,.08);
-                      color:white;
-                    ">
-                    Resume Board
-                  </button>
                 </div>
               </div>
             </div>
@@ -483,8 +468,6 @@ import { renderBoard } from "./board.js";
 
     const fetchBtn = document.getElementById("fetchBtn");
     const startBoardBtn = document.getElementById("startBoardBtn");
-    const resumeBoardBtn = document.getElementById("resumeBoardBtn");
-
     const setStatus = (msg) => (statusEl.textContent = msg || "");
     const setPreview = (obj) => (previewEl.textContent = obj ? JSON.stringify(obj, null, 2) : "");
 
@@ -499,25 +482,6 @@ import { renderBoard } from "./board.js";
       btn.style.cursor = "not-allowed";
       btn.style.opacity = ".6";
     };
-
-    if (resumeBoardBtn) {
-      if (AppState.league && AppState.draft && Array.isArray(AppState.draft.teams) && AppState.draft.teams.length) {
-        enableBtn(resumeBoardBtn);
-      } else {
-        disableBtn(resumeBoardBtn);
-      }
-
-      resumeBoardBtn.onclick = async () => {
-        await loadState();
-
-        if (!AppState.draft || !Array.isArray(AppState.draft.teams) || !AppState.draft.teams.length) {
-          setStatus("Nothing to resume yet. Import a league first.");
-          return;
-        }
-
-        await renderBoard();
-      };
-    }
 
     let parsed = null;
 
