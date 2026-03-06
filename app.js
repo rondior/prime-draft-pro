@@ -230,7 +230,15 @@ import { renderBoard } from "./board.js";
       setShellStatus("Custom draft builder is the next page we will build.");
     });
 
-    btnEspn?.addEventListener("click", renderEspnImport);
+    btnEspn?.addEventListener("click", async () => {
+      const record = await createNewDraftRecord({
+        name: "ESPN Import",
+        season: CURRENT_SEASON
+      });
+
+      setShellStatus(`Created new ESPN import draft: ${record.name}`);
+      renderEspnImport();
+    });
 
     btnSettings?.addEventListener("click", () => {
       setShellStatus("Draft settings is reserved for the next pass.");
